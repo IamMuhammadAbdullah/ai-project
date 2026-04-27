@@ -13,10 +13,18 @@
       <div class="topbar">
         <div>
           <h1>A* Traffic Route Planner</h1>
-          <p id="routeSummary">Click once for start, then click again for destination.</p>
+          <p id="routeSummary">Click a road for start, then click a road for destination.</p>
         </div>
         <div class="toolbar" aria-label="Map actions">
-          <button id="pinModeBtn" type="button">Select Pin</button>
+          <label class="traffic-control" for="trafficSelect">
+            <span>Traffic</span>
+            <select id="trafficSelect">
+              <option value="normal">Normal</option>
+              <option value="light">Light</option>
+              <option value="heavy">Heavy</option>
+              <option value="rush">Rush hour</option>
+            </select>
+          </label>
           <button id="clearPinsBtn" type="button" class="secondary">Remove Pins</button>
           <button id="startRouteBtn" type="button" disabled>Start</button>
         </div>

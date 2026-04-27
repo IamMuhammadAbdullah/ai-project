@@ -1,6 +1,6 @@
 const canvas = document.getElementById("mapCanvas");
 const ctx = canvas.getContext("2d");
-const pinModeBtn = document.getElementById("pinModeBtn");
+const trafficSelect = document.getElementById("trafficSelect");
 const clearPinsBtn = document.getElementById("clearPinsBtn");
 const startRouteBtn = document.getElementById("startRouteBtn");
 const mapHint = document.getElementById("mapHint");
@@ -110,17 +110,22 @@ let startId = null;
 let endId = null;
 let startPoint = null;
 let endPoint = null;
+let startPin = null;
+let endPin = null;
+let startLaneSide = 1;
+let endLaneSide = 1;
 let possiblePaths = [];
 let bestPath = [];
+let pathPointCache = new Map();
 let allRouteProgress = 0;
 let bestRouteProgress = 0;
 let animationFrame = null;
 let nextClickTarget = "start";
-let pinModeEnabled = true;
 let routeStarted = false;
 let pinError = "";
 let pinErrorUntil = 0;
 let hoverPinPoint = null;
+let trafficMode = "normal";
 
 function edgeKey(a, b) {
   return [a, b].sort().join("-");
@@ -134,10 +139,10 @@ function distance(a, b) {
 
 roads.forEach(([from, to, traffic, name, type]) => {
   const baseDistance = distance(from, to);
-  const edge = { from, to, traffic, name, type, distance: baseDistance, cost: baseDistance * traffic };
+  const edge = { from, to, baseTraffic: traffic, traffic, name, type, distance: baseDistance, cost: baseDistance * traffic };
   edgeMap.set(edgeKey(from, to), edge);
-  adjacency.get(from).push({ id: to, traffic, distance: baseDistance, cost: baseDistance * traffic });
-  adjacency.get(to).push({ id: from, traffic, distance: baseDistance, cost: baseDistance * traffic });
+  adjacency.get(from).push({ id: to, from, to, laneSide: -1, traffic, distance: baseDistance, cost: baseDistance * traffic });
+  adjacency.get(to).push({ id: from, from: to, to: from, laneSide: 1, traffic, distance: baseDistance, cost: baseDistance * traffic });
 });
 
 roundabouts.forEach((roundabout) => {
@@ -185,11 +190,13 @@ function reconstructPath(cameFrom, current) {
   return path;
 }
 
-function findAllPaths(start, goal, maxPaths = 40, maxDepth = 12) {
+function findAllPaths(start, goal, maxPaths = 14, maxDepth = 9) {
   const paths = [];
   const stack = [[start, [start], 0]];
+  const startedAt = performance.now();
 
   while (stack.length && paths.length < maxPaths) {
+    if (performance.now() - startedAt > 45) break;
     const [current, path, cost] = stack.pop();
     if (current === goal) {
       paths.push({ path, cost });
@@ -215,29 +222,33 @@ function pathDistance(path) {
 }
 
 function calculateRoutes(shouldAnimate = true) {
-  if (!startPoint || !endPoint || !startId || !endId || startId === endId) {
+  if (!startPoint || !endPoint || !startId || !endId) {
     possiblePaths = [];
     bestPath = [];
+    pathPointCache = new Map();
     allRouteProgress = 0;
     bestRouteProgress = 0;
     updateStats();
+    updateClickHint();
     draw();
     return;
   }
 
   possiblePaths = findAllPaths(startId, endId);
   bestPath = aStar(startId, endId);
+  pathPointCache = new Map();
   allRouteProgress = shouldAnimate ? 0 : 1;
   bestRouteProgress = shouldAnimate ? 0 : 1;
   routeStarted = shouldAnimate;
   updateStats();
+  updateClickHint();
   draw();
   if (shouldAnimate) animateRoute();
 }
 
 function updateStats() {
   if (!startPoint) {
-    routeSummary.textContent = "Click once for start, then click again for destination.";
+    routeSummary.textContent = "Click a road for start, then click a road for destination.";
     return;
   }
 
@@ -251,13 +262,39 @@ function updateStats() {
     return;
   }
 
-  routeSummary.textContent = `${possiblePaths.length} routes ready | A* cost ${pathCost(bestPath).toFixed(1)} | ${pathDistance(bestPath).toFixed(1)} km`;
+  routeSummary.textContent = `${possiblePaths.length} routes ready | ${trafficSelect.options[trafficSelect.selectedIndex].text} traffic | A* cost ${pathCost(bestPath).toFixed(1)} | ${pathDistance(bestPath).toFixed(1)} km`;
 }
 
 function trafficColor(traffic) {
   if (traffic >= 1.7) return "#ea4335";
   if (traffic >= 1.3) return "#fbbc04";
   return "#34a853";
+}
+
+function trafficForMode(edge, index) {
+  if (trafficMode === "light") return Math.max(1, edge.baseTraffic * 0.72);
+  if (trafficMode === "heavy") return Math.min(2.8, edge.baseTraffic * 1.45);
+  if (trafficMode === "rush") {
+    const wave = 0.86 + ((index * 37) % 80) / 50;
+    return Math.min(2.9, Math.max(1, edge.baseTraffic * wave));
+  }
+  return edge.baseTraffic;
+}
+
+function applyTrafficMode() {
+  [...edgeMap.values()].forEach((edge, index) => {
+    edge.traffic = trafficForMode(edge, index);
+    edge.cost = edge.distance * edge.traffic;
+  });
+
+  adjacency.forEach((neighbors, from) => {
+    neighbors.forEach((neighbor) => {
+      const edge = edgeMap.get(edgeKey(from, neighbor.id));
+      neighbor.traffic = edge.traffic;
+      neighbor.cost = edge.cost;
+      neighbor.distance = edge.distance;
+    });
+  });
 }
 
 function roadWidth(type) {
@@ -341,9 +378,30 @@ function drawLaneDirection(edge) {
   const laneOffset = Math.max(4, roadWidth(edge.type) * 0.28);
 
   [0.35, 0.65].forEach((t) => {
-    drawArrow(from.x + dx * t + nx * laneOffset, from.y + dy * t + ny * laneOffset, angle, "#6f7782", 7, 0.8);
-    drawArrow(to.x - dx * t - nx * laneOffset, to.y - dy * t - ny * laneOffset, angle + Math.PI, "#6f7782", 7, 0.8);
+    drawArrow(from.x + dx * t + nx * laneOffset, from.y + dy * t + ny * laneOffset, angle + Math.PI, "#6f7782", 7, 0.8);
+    drawArrow(to.x - dx * t - nx * laneOffset, to.y - dy * t - ny * laneOffset, angle, "#6f7782", 7, 0.8);
   });
+}
+
+function directedLaneSide(fromId, toId) {
+  const edge = edgeMap.get(edgeKey(fromId, toId));
+  if (!edge) return -1;
+  return edge.from === fromId && edge.to === toId ? -1 : 1;
+}
+
+function lanePointOnEdge(edge, t, laneSide) {
+  const from = nodeById.get(edge.from);
+  const to = nodeById.get(edge.to);
+  const dx = to.x - from.x;
+  const dy = to.y - from.y;
+  const length = Math.hypot(dx, dy) || 1;
+  const nx = -dy / length;
+  const ny = dx / length;
+  const laneOffset = Math.max(7, roadWidth(edge.type) * 0.24);
+  return {
+    x: from.x + dx * t + nx * laneOffset * laneSide,
+    y: from.y + dy * t + ny * laneOffset * laneSide
+  };
 }
 
 function drawRoadLabel(edge) {
@@ -370,7 +428,7 @@ function drawRoadLabel(edge) {
 
 function drawPartialPath(path, progress, color, width, alpha = 1) {
   if (!path.length || progress <= 0) return;
-  const points = pathToPoints(path);
+  const points = cachedPathToPoints(path);
   const segments = points.slice(0, -1).map((point, index) => ({ from: point, to: points[index + 1] }));
   const exact = progress * segments.length;
 
@@ -501,16 +559,16 @@ function drawHighlights() {
   if (!routeStarted) return;
 
   possiblePaths.forEach(({ path }) => {
-    drawPartialPath(path, allRouteProgress, "#fbbc04", 20, 0.2);
-    drawPartialPath(path, allRouteProgress, "#202124", 9, 0.34);
+    drawPartialPath(path, allRouteProgress, "#fbbc04", 8, 0.22);
+    drawPartialPath(path, allRouteProgress, "#202124", 3, 0.5);
   });
 
-  drawPartialPath(bestPath, bestRouteProgress, "#fbbc04", 28, 0.96);
-  drawPartialPath(bestPath, bestRouteProgress, "#202124", 12, 0.96);
+  drawPartialPath(bestPath, bestRouteProgress, "#fbbc04", 11, 0.96);
+  drawPartialPath(bestPath, bestRouteProgress, "#202124", 4, 0.96);
 }
 
 function pointOnPath(path, progress) {
-  const points = pathToPoints(path);
+  const points = cachedPathToPoints(path);
   const segments = points.slice(0, -1).map((point, index) => ({ from: point, to: points[index + 1] }));
   if (!segments.length) return null;
   const exact = Math.min(segments.length - 0.001, Math.max(0, progress) * segments.length);
@@ -557,7 +615,7 @@ function drawPin(point, label, color, alpha = 1) {
 }
 
 function drawMarkers() {
-  if (hoverPinPoint && pinModeEnabled) {
+  if (hoverPinPoint) {
     drawPin(hoverPinPoint, nextClickTarget === "start" ? "S" : "E", "#5f6368", 0.42);
   }
   drawPin(startPoint, "S", "#1a73e8");
@@ -566,7 +624,7 @@ function drawMarkers() {
 
 function drawVehicle() {
   if (!bestPath.length || bestRouteProgress <= 0) return;
-  const points = pathToPoints(bestPath);
+  const points = cachedPathToPoints(bestPath);
   const segments = points.slice(0, -1).map((point, index) => ({ from: point, to: points[index + 1] }));
   const exact = Math.min(segments.length - 0.001, bestRouteProgress * segments.length);
   const current = Math.floor(exact);
@@ -581,12 +639,12 @@ function drawVehicle() {
   ctx.shadowBlur = 12;
   ctx.fillStyle = "#202124";
   ctx.beginPath();
-  ctx.arc(x, y, 17, 0, Math.PI * 2);
+  ctx.arc(x, y, 9, 0, Math.PI * 2);
   ctx.fill();
   ctx.shadowBlur = 0;
   ctx.fillStyle = "#ffffff";
   ctx.beginPath();
-  ctx.arc(x, y, 7, 0, Math.PI * 2);
+  ctx.arc(x, y, 4, 0, Math.PI * 2);
   ctx.fill();
   ctx.restore();
 }
@@ -648,25 +706,51 @@ function nearestRoadPoint(point, excludedId = null) {
     const t = Math.max(0, Math.min(1, ((point.x - from.x) * dx + (point.y - from.y) * dy) / lengthSquared));
     const center = { x: from.x + dx * t, y: from.y + dy * t };
     const signedDistance = (point.x - center.x) * nx + (point.y - center.y) * ny;
-    const laneOffset = Math.max(7, roadWidth(edge.type) * 0.24);
     const laneSide = signedDistance < 0 ? -1 : 1;
-    const snapped = {
-      x: center.x + nx * laneOffset * laneSide,
-      y: center.y + ny * laneOffset * laneSide
-    };
+    const snapped = lanePointOnEdge(edge, t, laneSide);
     const distanceToRoad = Math.abs(signedDistance);
-    const fromDistance = Math.hypot(center.x - from.x, center.y - from.y);
-    const toDistance = Math.hypot(center.x - to.x, center.y - to.y);
-    let graphNode = fromDistance <= toDistance ? edge.from : edge.to;
+    const laneStartNode = laneSide === -1 ? edge.from : edge.to;
+    const laneEndNode = laneSide === -1 ? edge.to : edge.from;
+    let graphNode = laneStartNode;
 
     if (graphNode === excludedId) {
-      graphNode = graphNode === edge.from ? edge.to : edge.from;
+      graphNode = laneEndNode;
     }
 
     return distanceToRoad < nearest.distance
-      ? { point: snapped, graphNode, distance: distanceToRoad, edge }
+      ? { point: snapped, graphNode, laneStartNode, laneEndNode, laneT: t, distance: distanceToRoad, edge, laneSide }
       : nearest;
-  }, { point, graphNode: nearestNode(point, excludedId).id, distance: Infinity, edge: null });
+  }, { point, graphNode: nearestNode(point, excludedId).id, laneStartNode: null, laneEndNode: null, laneT: 0, distance: Infinity, edge: null, laneSide: 1 });
+}
+
+function lanePointForDirectedNode(nodeId, fromId, toId) {
+  const edge = edgeMap.get(edgeKey(fromId, toId));
+  if (!edge) return nodeById.get(nodeId);
+  const laneSide = directedLaneSide(fromId, toId);
+  const t = roundaboutTrimmedT(edge, nodeId);
+  return lanePointOnEdge(edge, t, laneSide);
+}
+
+function lanePointForPin(pinPoint, pathNodeId, nextNodeId) {
+  const edge = edgeMap.get(edgeKey(pathNodeId, nextNodeId));
+  if (!edge) return pinPoint;
+  const laneSide = directedLaneSide(pathNodeId, nextNodeId);
+  const from = nodeById.get(edge.from);
+  const to = nodeById.get(edge.to);
+  const dx = to.x - from.x;
+  const dy = to.y - from.y;
+  const lengthSquared = dx * dx + dy * dy || 1;
+  const t = Math.max(0, Math.min(1, ((pinPoint.x - from.x) * dx + (pinPoint.y - from.y) * dy) / lengthSquared));
+  return lanePointOnEdge(edge, t, laneSide);
+}
+
+function samePoint(a, b) {
+  return a && b && Math.hypot(a.x - b.x, a.y - b.y) < 0.5;
+}
+
+function pushPoint(points, point) {
+  if (!point) return;
+  if (!samePoint(points[points.length - 1], point)) points.push(point);
 }
 
 function angleBetweenPoints(from, to) {
@@ -685,9 +769,10 @@ function sampleRoundaboutArc(roundabout, entryPoint, exitPoint) {
   const end = normalizeAngle(angleBetweenPoints(roundabout, exitPoint));
   let delta = end - start;
   if (delta < 0) delta += Math.PI * 2;
+  if (delta > Math.PI * 1.35) delta -= Math.PI * 2;
 
   const samples = [];
-  const steps = Math.max(5, Math.ceil(delta / (Math.PI / 8)));
+  const steps = Math.max(5, Math.ceil(Math.abs(delta) / (Math.PI / 8)));
   for (let i = 0; i <= steps; i++) {
     const angle = start + delta * (i / steps);
     samples.push({
@@ -698,34 +783,101 @@ function sampleRoundaboutArc(roundabout, entryPoint, exitPoint) {
   return samples;
 }
 
+function travelTForNode(edge, nodeId) {
+  return edge.from === nodeId ? 0 : 1;
+}
+
+function roundaboutTrimmedT(edge, nodeId) {
+  const roundabout = roundaboutByNode.get(nodeId);
+  if (!roundabout) return travelTForNode(edge, nodeId);
+
+  const from = nodeById.get(edge.from);
+  const to = nodeById.get(edge.to);
+  const length = Math.hypot(to.x - from.x, to.y - from.y) || 1;
+  const trim = Math.min(0.35, (roundabout.r + roadWidth(edge.type) * 0.08) / length);
+  return edge.from === nodeId ? trim : 1 - trim;
+}
+
+function sampleDirectedEdge(fromId, toId, startT = null, endT = null) {
+  const edge = edgeMap.get(edgeKey(fromId, toId));
+  if (!edge) return [];
+  const laneSide = directedLaneSide(fromId, toId);
+  const fromT = startT ?? roundaboutTrimmedT(edge, fromId);
+  const toT = endT ?? roundaboutTrimmedT(edge, toId);
+  const steps = Math.max(4, Math.ceil(Math.abs(toT - fromT) * edge.distance / 2.4));
+  const points = [];
+
+  for (let i = 0; i <= steps; i++) {
+    const t = fromT + (toT - fromT) * (i / steps);
+    points.push(lanePointOnEdge(edge, t, laneSide));
+  }
+
+  return points;
+}
+
+function tForPointOnEdge(point, edge) {
+  const from = nodeById.get(edge.from);
+  const to = nodeById.get(edge.to);
+  const dx = to.x - from.x;
+  const dy = to.y - from.y;
+  const lengthSquared = dx * dx + dy * dy || 1;
+  return Math.max(0, Math.min(1, ((point.x - from.x) * dx + (point.y - from.y) * dy) / lengthSquared));
+}
+
 function pathToPoints(path) {
   if (!path.length) return [];
-  const rawPoints = [
-    startPoint,
-    ...path.map((id) => nodeById.get(id)),
-    endPoint
-  ].filter(Boolean);
-
   const routedPoints = [];
-  rawPoints.forEach((point, index) => {
-    const id = index > 0 && index <= path.length ? path[index - 1] : null;
-    const roundabout = id ? roundaboutByNode.get(id) : null;
 
-    if (!roundabout || index === 0 || index === rawPoints.length - 1) {
-      routedPoints.push(point);
-      return;
+  if (startPin?.edge) {
+    const startT = tForPointOnEdge(startPoint, startPin.edge);
+    sampleDirectedEdge(startPin.laneStartNode, startPin.laneEndNode, startT, null).forEach((point) => pushPoint(routedPoints, point));
+  } else {
+    pushPoint(routedPoints, startPoint);
+  }
+
+  path.slice(0, -1).forEach((fromId, index) => {
+    const toId = path[index + 1];
+    const previousPoint = routedPoints[routedPoints.length - 1];
+    const nextStart = lanePointForDirectedNode(fromId, fromId, toId);
+    const roundabout = roundaboutByNode.get(fromId);
+
+    if (roundabout && previousPoint && nextStart && !samePoint(previousPoint, nextStart)) {
+      sampleRoundaboutArc(roundabout, previousPoint, nextStart).forEach((point) => pushPoint(routedPoints, point));
+    } else {
+      pushPoint(routedPoints, nextStart);
     }
 
-    const previous = rawPoints[index - 1];
-    const next = rawPoints[index + 1];
-    routedPoints.push(...sampleRoundaboutArc(roundabout, previous, next));
+    sampleDirectedEdge(fromId, toId).forEach((point) => pushPoint(routedPoints, point));
   });
+
+  if (endPin?.edge) {
+    const finalNode = path[path.length - 1];
+    const endEdgeStart = lanePointForDirectedNode(finalNode, endPin.laneStartNode, endPin.laneEndNode);
+    const roundabout = roundaboutByNode.get(finalNode);
+    if (roundabout && !samePoint(routedPoints[routedPoints.length - 1], endEdgeStart)) {
+      sampleRoundaboutArc(roundabout, routedPoints[routedPoints.length - 1], endEdgeStart).forEach((point) => pushPoint(routedPoints, point));
+    } else {
+      pushPoint(routedPoints, endEdgeStart);
+    }
+
+    const endT = tForPointOnEdge(endPoint, endPin.edge);
+    sampleDirectedEdge(endPin.laneStartNode, endPin.laneEndNode, null, endT).forEach((point) => pushPoint(routedPoints, point));
+  } else {
+    pushPoint(routedPoints, endPoint);
+  }
 
   return routedPoints;
 }
 
+function cachedPathToPoints(path) {
+  const key = path.join("-");
+  if (!pathPointCache.has(key)) {
+    pathPointCache.set(key, pathToPoints(path));
+  }
+  return pathPointCache.get(key);
+}
+
 function updateClickHint() {
-  pinModeBtn.classList.toggle("active", pinModeEnabled);
   startRouteBtn.disabled = !startPoint || !endPoint || !bestPath.length;
 
   if (pinError && performance.now() < pinErrorUntil) {
@@ -737,23 +889,17 @@ function updateClickHint() {
   pinError = "";
   mapHint.classList.remove("error");
 
-  if (!pinModeEnabled) {
-    mapHint.textContent = "Select Pin is off. Turn it on to place pins.";
-    return;
-  }
-
   if (!startPoint) {
-    mapHint.textContent = "Click anywhere to set the start point.";
+    mapHint.textContent = "Click a road to place the start pin.";
     return;
   }
 
   mapHint.textContent = nextClickTarget === "start"
-    ? "Click anywhere to set a new start point."
-    : "Click anywhere to set the end point.";
+    ? "Click a road to set a new start pin."
+    : "Click a road to place the destination pin.";
 }
 
 canvas.addEventListener("click", (event) => {
-  if (!pinModeEnabled) return;
   const point = canvasPoint(event.clientX, event.clientY);
   const picked = nearestRoadPoint(point, nextClickTarget === "end" ? startId : null);
   const maxRoadDistance = picked.edge ? roadWidth(picked.edge.type) * 0.72 : 36;
@@ -772,8 +918,12 @@ canvas.addEventListener("click", (event) => {
   if (nextClickTarget === "start") {
     cancelAnimationFrame(animationFrame);
     startPoint = picked.point;
+    startPin = picked;
+    startLaneSide = picked.laneSide;
     endPoint = null;
-    startId = picked.graphNode;
+    endPin = null;
+    endLaneSide = 1;
+    startId = picked.laneEndNode;
     endId = null;
     possiblePaths = [];
     bestPath = [];
@@ -787,9 +937,11 @@ canvas.addEventListener("click", (event) => {
     return;
   }
 
-  if (picked.graphNode !== startId) {
+  if (picked.laneStartNode !== startId || picked.laneEndNode !== startId) {
     endPoint = picked.point;
-    endId = picked.graphNode;
+    endPin = picked;
+    endLaneSide = picked.laneSide;
+    endId = picked.laneStartNode;
     nextClickTarget = "start";
     routeStarted = false;
     updateClickHint();
@@ -798,11 +950,6 @@ canvas.addEventListener("click", (event) => {
 });
 
 canvas.addEventListener("mousemove", (event) => {
-  if (!pinModeEnabled) {
-    hoverPinPoint = null;
-    return;
-  }
-
   const picked = nearestRoadPoint(canvasPoint(event.clientX, event.clientY), nextClickTarget === "end" ? startId : null);
   const maxRoadDistance = picked.edge ? roadWidth(picked.edge.type) * 0.72 : 36;
   hoverPinPoint = picked.distance <= maxRoadDistance ? picked.point : null;
@@ -814,32 +961,47 @@ canvas.addEventListener("mouseleave", () => {
   draw();
 });
 
-pinModeBtn.addEventListener("click", () => {
-  pinModeEnabled = !pinModeEnabled;
-  updateClickHint();
-});
-
 clearPinsBtn.addEventListener("click", () => {
   cancelAnimationFrame(animationFrame);
   startId = null;
   endId = null;
   startPoint = null;
   endPoint = null;
+  startPin = null;
+  endPin = null;
+  startLaneSide = 1;
+  endLaneSide = 1;
   hoverPinPoint = null;
   possiblePaths = [];
   bestPath = [];
+  pathPointCache = new Map();
   allRouteProgress = 0;
   bestRouteProgress = 0;
   routeStarted = false;
   nextClickTarget = "start";
-  pinModeEnabled = true;
   updateClickHint();
   updateStats();
   draw();
 });
 
+trafficSelect.addEventListener("change", () => {
+  trafficMode = trafficSelect.value;
+  cancelAnimationFrame(animationFrame);
+  applyTrafficMode();
+  routeStarted = false;
+  allRouteProgress = 0;
+  bestRouteProgress = 0;
+  if (startPoint && endPoint) {
+    calculateRoutes(false);
+  } else {
+    updateStats();
+    draw();
+  }
+});
+
 startRouteBtn.addEventListener("click", animateRoute);
 
+applyTrafficMode();
 updateClickHint();
 updateStats();
 draw();
