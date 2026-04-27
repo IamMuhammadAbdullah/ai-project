@@ -1,5 +1,5 @@
-import { createRouteEngine, roadWidth } from "./src/route-engine.mjs";
-import { createMapRenderer } from "./src/map-renderer.mjs";
+import { createRouteEngine, roadWidth } from "./src/route-engine.js";
+import { createMapRenderer } from "./src/map-renderer.js";
 
 const canvas = document.getElementById("mapCanvas");
 const trafficSelect = document.getElementById("trafficSelect");
@@ -37,6 +37,41 @@ function canvasPoint(clientX, clientY) {
     x: (clientX - rect.left) * (canvas.width / rect.width),
     y: (clientY - rect.top) * (canvas.height / rect.height)
   };
+}
+
+function clearRouteResults() {
+  Object.assign(state, {
+    possiblePaths: [],
+    bestPath: [],
+    routeCost: 0,
+    routeDistance: 0,
+    pathPointCache: new Map(),
+    allRouteProgress: 0,
+    bestRouteProgress: 0,
+    routeStarted: false
+  });
+}
+
+function clearPinSelection() {
+  Object.assign(state, {
+    startId: null,
+    endId: null,
+    startPoint: null,
+    endPoint: null,
+    startPin: null,
+    endPin: null,
+    hoverPinPoint: null,
+    nextClickTarget: "start"
+  });
+  clearRouteResults();
+}
+
+function setPinError(message) {
+  state.pinError = message;
+  state.pinErrorUntil = performance.now() + 2200;
+  updateClickHint();
+  draw();
+  setTimeout(updateClickHint, 2300);
 }
 
 function cachedPathToPoints(path) {
@@ -85,44 +120,19 @@ function updateClickHint() {
       : "Hover over a lane, then click to place the destination pin.";
 }
 
-async function getPythonRoutes() {
-  const params = new URLSearchParams({
-    start: state.startId,
-    end: state.endId,
-    traffic: trafficSelect.value
-  });
-  const response = await fetch(`/api/routes?${params.toString()}`);
-  if (!response.ok) throw new Error("Python route API unavailable");
-  return response.json();
-}
-
-async function calculateRoutes(shouldAnimate = true) {
+function calculateRoutes(shouldAnimate = true) {
   if (!state.startPoint || !state.endPoint || !state.startId || !state.endId) {
-    state.possiblePaths = [];
-    state.bestPath = [];
-    state.routeCost = 0;
-    state.routeDistance = 0;
-    state.pathPointCache = new Map();
-    state.allRouteProgress = 0;
-    state.bestRouteProgress = 0;
+    clearRouteResults();
     updateStats();
     updateClickHint();
     draw();
     return;
   }
 
-  try {
-    const result = await getPythonRoutes();
-    state.possiblePaths = result.possiblePaths;
-    state.bestPath = result.bestPath;
-    state.routeCost = result.cost;
-    state.routeDistance = result.distance;
-  } catch {
-    state.possiblePaths = engine.findAllPaths(state.startId, state.endId);
-    state.bestPath = engine.aStar(state.startId, state.endId);
-    state.routeCost = engine.pathCost(state.bestPath);
-    state.routeDistance = engine.pathDistance(state.bestPath);
-  }
+  state.possiblePaths = engine.findAllPaths(state.startId, state.endId);
+  state.bestPath = engine.aStar(state.startId, state.endId);
+  state.routeCost = engine.pathCost(state.bestPath);
+  state.routeDistance = engine.pathDistance(state.bestPath);
   state.pathPointCache = new Map();
   state.allRouteProgress = shouldAnimate ? 0 : 1;
   state.bestRouteProgress = shouldAnimate ? 0 : 1;
@@ -160,11 +170,7 @@ function maxRoadDistance(picked) {
 canvas.addEventListener("click", (event) => {
   const picked = engine.nearestRoadPoint(canvasPoint(event.clientX, event.clientY), state.nextClickTarget === "end" ? state.startId : null);
   if (picked.distance > maxRoadDistance(picked)) {
-    state.pinError = "Move over a lane until the preview pin appears, then click.";
-    state.pinErrorUntil = performance.now() + 2200;
-    updateClickHint();
-    draw();
-    setTimeout(updateClickHint, 2300);
+    setPinError("Move over a lane until the preview pin appears, then click.");
     return;
   }
 
@@ -178,14 +184,9 @@ canvas.addEventListener("click", (event) => {
       endPin: null,
       startId: picked.laneEndNode,
       endId: null,
-      possiblePaths: [],
-      bestPath: [],
-      pathPointCache: new Map(),
-      allRouteProgress: 0,
-      bestRouteProgress: 0,
-      routeStarted: false,
       nextClickTarget: "end"
     });
+    clearRouteResults();
     updateClickHint();
     updateStats();
     draw();
@@ -199,7 +200,7 @@ canvas.addEventListener("click", (event) => {
     state.nextClickTarget = "start";
     state.routeStarted = false;
     updateClickHint();
-    void calculateRoutes(false);
+    calculateRoutes(false);
   }
 });
 
@@ -216,22 +217,7 @@ canvas.addEventListener("mouseleave", () => {
 
 clearPinsBtn.addEventListener("click", () => {
   cancelAnimationFrame(state.animationFrame);
-  Object.assign(state, {
-    startId: null,
-    endId: null,
-    startPoint: null,
-    endPoint: null,
-    startPin: null,
-    endPin: null,
-    hoverPinPoint: null,
-    possiblePaths: [],
-    bestPath: [],
-    pathPointCache: new Map(),
-    allRouteProgress: 0,
-    bestRouteProgress: 0,
-    routeStarted: false,
-    nextClickTarget: "start"
-  });
+  clearPinSelection();
   updateClickHint();
   updateStats();
   draw();
@@ -244,7 +230,7 @@ trafficSelect.addEventListener("change", () => {
   state.allRouteProgress = 0;
   state.bestRouteProgress = 0;
   state.pathPointCache = new Map();
-  if (state.startPoint && state.endPoint) void calculateRoutes(false);
+  if (state.startPoint && state.endPoint) calculateRoutes(false);
   else {
     updateStats();
     draw();

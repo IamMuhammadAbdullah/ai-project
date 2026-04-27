@@ -375,3 +375,27 @@ class RouteEngine:
 
 def calculate_routes(start, end, traffic_mode="normal"):
     return RouteEngine(traffic_mode).routes(start, end)
+
+
+def a_star(start, goal, traffic_mode="normal"):
+    return RouteEngine(traffic_mode).a_star(start, goal)
+
+
+def find_all_paths(start, goal, traffic_mode="normal", max_paths=14, max_depth=9):
+    return RouteEngine(traffic_mode).find_all_paths(start, goal, max_paths, max_depth)
+
+
+def nearest_road_point(point, excluded_id=None, traffic_mode="normal"):
+    return RouteEngine(traffic_mode).nearest_road_point(point, excluded_id)
+
+
+def path_to_points(path, start_pin=None, end_pin=None, start_point=None, end_point=None, traffic_mode="normal"):
+    return RouteEngine(traffic_mode).path_to_points(path, start_pin, end_pin, start_point, end_point)
+
+
+def route_cost(path, traffic_mode="normal"):
+    return RouteEngine(traffic_mode).path_cost(path)
+
+
+def route_distance(path, traffic_mode="normal"):
+    return RouteEngine(traffic_mode).path_distance(path)

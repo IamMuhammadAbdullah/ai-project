@@ -20,19 +20,22 @@ This project implements the route-planning requirements from `AI_ProjectProposal
 
 ## Run
 
-Run `python python_server.py`, then open `http://localhost:5173`.
+Open `index.html` with your editor's browser preview.
 
-The browser uses Python for A*, possible route search, route cost, traffic-weighted calculations, road/lane snapping, and reusable route geometry helpers. JavaScript still handles DOM interaction, canvas rendering, and animation. If the Python API is unavailable, the browser keeps a JavaScript fallback so the UI does not break.
+The browser UI runs through JavaScript because DOM and canvas interaction happen in the browser. The convertible AI/route logic is also provided as reusable Python utilities in `python/route_engine.py`: A*, all-path search, traffic-weighted costs, lane snapping, and route geometry helpers.
 
 ## Structure
 
-- `python/` contains the Python route engine and map data used by the API.
-- `src/` contains browser-side map data, canvas rendering helpers, and a fallback route engine.
+- `python/` contains Python utility functions for A*, route search, snapping, traffic cost, and route geometry.
+- `src/` contains browser-side map data, canvas rendering helpers, and the browser script modules used by `index.html`.
 - `app.js` contains UI state, event handling, and animation orchestration.
-- `python_server.py` serves the app and exposes `/api/routes` and `/api/snap`.
 - `tests/` contains Python and JavaScript route checks.
 
 ## Test
 
 Run `python tests/python_route_tests.py` to check the Python route engine.
-Run `node tests/route-tests.js` to check the JavaScript lane snapping and route geometry fallback.
+Run `node tests/route-tests.js` to check the JavaScript lane snapping and route geometry used by the browser.
+
+## Evaluation Guide
+
+Read `CODEBASE_GUIDE.md` for a full explanation of the file structure, A* flow, lane snapping, traffic weighting, animation, and the JavaScript/Python split.

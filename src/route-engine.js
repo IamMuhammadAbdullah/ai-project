@@ -1,4 +1,4 @@
-import { rawNodes, rawRoads, rawRoundabouts } from "./map-data.mjs";
+import { rawNodes, rawRoads, rawRoundabouts } from "./map-data.js";
 
 const perf = globalThis.performance ?? { now: () => Date.now() };
 

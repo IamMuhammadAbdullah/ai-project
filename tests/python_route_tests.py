@@ -3,7 +3,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from python.route_engine import RouteEngine
+from python.route_engine import RouteEngine, a_star, calculate_routes, find_all_paths, nearest_road_point
 
 
 def run():
@@ -28,6 +28,11 @@ def run():
     heavy_best = heavy.a_star("A", "X")
     assert len(heavy_best) > 1
     assert heavy.path_cost(heavy_best) > 0
+
+    assert a_star("A", "X")[0] == "A"
+    assert find_all_paths("A", "X")
+    assert calculate_routes("A", "X")["bestPath"][-1] == "X"
+    assert nearest_road_point({"x": 170, "y": 165})["edge"]
     print("python_route_tests passed")
 
 

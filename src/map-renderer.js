@@ -1,5 +1,3 @@
-import { edgeKey } from "./route-engine.mjs";
-
 export function createMapRenderer(canvas, engine) {
   const ctx = canvas.getContext("2d");
   const { edgeMap, nodeById, roundabouts, roadWidth } = engine;
