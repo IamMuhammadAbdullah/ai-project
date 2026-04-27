@@ -1,4 +1,4 @@
-import { rawNodes, rawRoads, rawRoundabouts, rawUTurns } from "./map-data.mjs";
+import { rawNodes, rawRoads, rawRoundabouts } from "./map-data.mjs";
 
 const perf = globalThis.performance ?? { now: () => Date.now() };
 
@@ -19,10 +19,6 @@ export function createRouteEngine() {
   const roundabouts = rawRoundabouts.map((roundabout) => {
     const expanded = expandPoint(roundabout);
     return { ...roundabout, ...expanded, r: Math.round(roundabout.r * 1.2) };
-  });
-  const uTurns = rawUTurns.map((turn) => {
-    const expanded = expandPoint(turn);
-    return { ...turn, ...expanded, r: Math.round(turn.r * 1.18) };
   });
   const nodeById = new Map(nodes.map((node) => [node.id, node]));
   const adjacency = new Map(nodes.map((node) => [node.id, []]));
@@ -275,5 +271,5 @@ export function createRouteEngine() {
   }
 
   applyTrafficMode("normal");
-  return { nodes, nodeById, adjacency, edgeMap, roundabouts, uTurns, roundaboutByNode, aStar, findAllPaths, pathCost, pathDistance, applyTrafficMode, nearestRoadPoint, pathToPoints, roadWidth };
+  return { nodes, nodeById, adjacency, edgeMap, roundabouts, roundaboutByNode, aStar, findAllPaths, pathCost, pathDistance, applyTrafficMode, nearestRoadPoint, pathToPoints, roadWidth };
 }

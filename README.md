@@ -5,7 +5,7 @@ This project implements the route-planning requirements from `AI_ProjectProposal
 ## Features
 
 - Clean white map canvas with labeled roads.
-- Expanded map layout with extra-wide two-lane roads, lane direction arrows, varied road types, roundabouts, and U-turns.
+- Expanded map layout with extra-wide two-lane roads, lane direction arrows, varied road types, and roundabouts.
 - Roads are represented as directed lane edges. Start pins continue to the downstream lane node, destination pins are reached from the upstream lane node, and route traversal follows the lane direction shown on the map.
 - Traffic constraints on every road segment using low, medium, and heavy traffic weights.
 - Traffic can be changed from Normal, Light, Heavy, and Rush hour modes; route costs and A* selection recalculate after changes.
@@ -22,14 +22,14 @@ This project implements the route-planning requirements from `AI_ProjectProposal
 
 Run `python python_server.py`, then open `http://localhost:5173`.
 
-The browser uses Python for A*, possible route search, route cost, and traffic-weighted calculations. JavaScript still handles map rendering, pin interaction, lane geometry, and animation. If the Python API is unavailable, the browser keeps a JavaScript fallback so the UI does not break.
+The browser uses Python for A*, possible route search, route cost, traffic-weighted calculations, road/lane snapping, and reusable route geometry helpers. JavaScript still handles DOM interaction, canvas rendering, and animation. If the Python API is unavailable, the browser keeps a JavaScript fallback so the UI does not break.
 
 ## Structure
 
 - `python/` contains the Python route engine and map data used by the API.
-- `src/` contains browser-side map data, lane geometry, and canvas rendering helpers.
+- `src/` contains browser-side map data, canvas rendering helpers, and a fallback route engine.
 - `app.js` contains UI state, event handling, and animation orchestration.
-- `python_server.py` serves the app and exposes `/api/routes`.
+- `python_server.py` serves the app and exposes `/api/routes` and `/api/snap`.
 - `tests/` contains Python and JavaScript route checks.
 
 ## Test

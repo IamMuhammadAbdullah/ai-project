@@ -3,7 +3,7 @@ import mimetypes
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
-from python.route_engine import calculate_routes
+from python.route_engine import RouteEngine, calculate_routes
 
 
 class ProjectHandler(SimpleHTTPRequestHandler):
@@ -19,6 +19,9 @@ class ProjectHandler(SimpleHTTPRequestHandler):
         if parsed.path == "/api/routes":
             self.handle_routes(parsed.query)
             return
+        if parsed.path == "/api/snap":
+            self.handle_snap(parsed.query)
+            return
         super().do_GET()
 
     def handle_routes(self, query):
@@ -30,6 +33,18 @@ class ProjectHandler(SimpleHTTPRequestHandler):
             self.send_json({"error": "start and end are required"}, status=400)
             return
         self.send_json(calculate_routes(start, end, traffic))
+
+    def handle_snap(self, query):
+        params = parse_qs(query)
+        try:
+            x = float(params.get("x", [""])[0])
+            y = float(params.get("y", [""])[0])
+        except ValueError:
+            self.send_json({"error": "numeric x and y are required"}, status=400)
+            return
+        traffic = params.get("traffic", ["normal"])[0]
+        excluded = params.get("exclude", [None])[0]
+        self.send_json(RouteEngine(traffic).nearest_road_point({"x": x, "y": y}, excluded))
 
     def send_json(self, payload, status=200):
         body = json.dumps(payload).encode("utf-8")

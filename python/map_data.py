@@ -39,3 +39,9 @@ RAW_ROADS = [
     ("Q", "V", 1.5, "Garden Cut", "local"), ("R", "W", 1.1, "Expo Service", "local"), ("C", "G", 2.1, "Ring Road", "highway"), ("F", "K", 1.6, "Airport Spur", "highway"), ("S", "U", 2.4, "Southern Ring", "highway"),
     ("T", "V", 2, "South Connector", "highway"), ("U", "W", 1.7, "Cargo Road", "highway"), ("V", "X", 1.9, "Terminal Express", "highway"),
 ]
+
+RAW_ROUNDABOUTS = [
+    {"x": 650, "y": 325, "r": 42, "label": "Civic Roundabout"},
+    {"x": 840, "y": 520, "r": 38, "label": "Railway Circle"},
+    {"x": 1105, "y": 565, "r": 36, "label": "Garden Circle"},
+]

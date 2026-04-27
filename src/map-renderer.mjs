@@ -2,7 +2,7 @@ import { edgeKey } from "./route-engine.mjs";
 
 export function createMapRenderer(canvas, engine) {
   const ctx = canvas.getContext("2d");
-  const { edgeMap, nodeById, roundabouts, uTurns, roadWidth } = engine;
+  const { edgeMap, nodeById, roundabouts, roadWidth } = engine;
 
   const trafficColor = (traffic) => traffic >= 1.7 ? "#ea4335" : traffic >= 1.3 ? "#fbbc04" : "#34a853";
 
@@ -110,32 +110,6 @@ export function createMapRenderer(canvas, engine) {
     });
   }
 
-  function drawUTurns() {
-    uTurns.forEach((turn) => {
-      ctx.save();
-      ctx.strokeStyle = "#ffffff";
-      ctx.lineWidth = 17;
-      ctx.beginPath();
-      ctx.arc(turn.x, turn.y, turn.r, turn.start, turn.end);
-      ctx.stroke();
-      ctx.strokeStyle = "#d0d4da";
-      ctx.lineWidth = 10;
-      ctx.beginPath();
-      ctx.arc(turn.x, turn.y, turn.r, turn.start, turn.end);
-      ctx.stroke();
-      ctx.strokeStyle = "#ffffff";
-      ctx.lineWidth = 4;
-      ctx.beginPath();
-      ctx.arc(turn.x, turn.y, turn.r, turn.start, turn.end);
-      ctx.stroke();
-      ctx.fillStyle = "#6b7280";
-      ctx.font = "600 11px Segoe UI, Arial";
-      ctx.textAlign = "center";
-      ctx.fillText(turn.label, turn.x, turn.y + turn.r + 17);
-      ctx.restore();
-    });
-  }
-
   function drawTrafficRoads() {
     const edges = [...edgeMap.values()].sort((a, b) => roadWidth(a.type) - roadWidth(b.type));
     edges.forEach((edge) => drawRoad(edge, edge.type === "highway" ? "#f6c453" : "#ffffff", roadWidth(edge.type) + 12, 1));
@@ -149,7 +123,6 @@ export function createMapRenderer(canvas, engine) {
     });
     edges.forEach((edge) => drawRoad(edge, trafficColor(edge.traffic), 3.5, 0.72, roadWidth(edge.type) * 0.48));
     drawRoundabouts();
-    drawUTurns();
     edges.forEach(drawLaneDirection);
     edges.forEach(drawRoadLabel);
   }

@@ -45,9 +45,3 @@ export const rawRoundabouts = [
   { x: 840, y: 520, r: 38, label: "Railway Circle" },
   { x: 1105, y: 565, r: 36, label: "Garden Circle" }
 ];
-
-export const rawUTurns = [
-  { x: 565, y: 210, r: 30, start: -0.45, end: Math.PI + 0.45, label: "U-turn" },
-  { x: 1260, y: 420, r: 34, start: Math.PI * 0.55, end: Math.PI * 1.78, label: "U-turn" },
-  { x: 460, y: 710, r: 32, start: -Math.PI * 0.78, end: Math.PI * 0.52, label: "U-turn" }
-];
