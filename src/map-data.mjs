@@ -1,0 +1,53 @@
+export const rawNodes = [
+  { id: "A", name: "North Gate", x: 115, y: 120 },
+  { id: "B", name: "Lake View", x: 330, y: 90 },
+  { id: "C", name: "Tech Park", x: 560, y: 125 },
+  { id: "D", name: "Old Town", x: 800, y: 85 },
+  { id: "E", name: "Hill Road", x: 1080, y: 130 },
+  { id: "F", name: "Airport Link", x: 1330, y: 110 },
+  { id: "G", name: "Museum", x: 160, y: 310 },
+  { id: "H", name: "Central Mall", x: 410, y: 290 },
+  { id: "I", name: "City Hall", x: 650, y: 325 },
+  { id: "J", name: "Business Bay", x: 910, y: 300 },
+  { id: "K", name: "Harbor", x: 1160, y: 340 },
+  { id: "L", name: "East Market", x: 1390, y: 300 },
+  { id: "M", name: "University", x: 105, y: 535 },
+  { id: "N", name: "Stadium", x: 350, y: 520 },
+  { id: "O", name: "Medical City", x: 585, y: 555 },
+  { id: "P", name: "Railway Hub", x: 840, y: 520 },
+  { id: "Q", name: "Garden Town", x: 1105, y: 565 },
+  { id: "R", name: "Expo Center", x: 1340, y: 520 },
+  { id: "S", name: "South Park", x: 180, y: 760 },
+  { id: "T", name: "West End", x: 460, y: 790 },
+  { id: "U", name: "Industrial Zone", x: 730, y: 760 },
+  { id: "V", name: "River Bridge", x: 995, y: 795 },
+  { id: "W", name: "Logistics Yard", x: 1235, y: 745 },
+  { id: "X", name: "South Terminal", x: 1410, y: 815 }
+];
+
+export const rawRoads = [
+  ["A", "B", 1, "Lake Road", "primary"], ["B", "C", 1.2, "Lake Road", "primary"], ["C", "D", 1.8, "University Ave", "primary"], ["D", "E", 1.1, "Hill Road", "primary"], ["E", "F", 1.5, "Airport Road", "highway"],
+  ["G", "H", 1.1, "Museum Street", "secondary"], ["H", "I", 1.6, "Central Avenue", "primary"], ["I", "J", 1, "Central Avenue", "primary"], ["J", "K", 1.9, "Harbor Road", "primary"], ["K", "L", 1.2, "Market Road", "secondary"],
+  ["M", "N", 1.3, "Campus Drive", "secondary"], ["N", "O", 1, "Stadium Road", "secondary"], ["O", "P", 1.7, "Medical Road", "primary"], ["P", "Q", 1.1, "Garden Boulevard", "primary"], ["Q", "R", 1.4, "Expo Road", "secondary"],
+  ["S", "T", 1.2, "South Park Way", "secondary"], ["T", "U", 1.5, "West End Road", "secondary"], ["U", "V", 1, "Industrial Link", "primary"], ["V", "W", 1.8, "River Bridge", "highway"], ["W", "X", 1.1, "Terminal Road", "highway"],
+  ["A", "G", 1.4, "North Gate Road", "secondary"], ["G", "M", 1, "Museum Road", "secondary"], ["M", "S", 1.7, "University Road", "primary"], ["B", "H", 1, "Mall Road", "secondary"], ["H", "N", 1.4, "Stadium Link", "secondary"],
+  ["N", "T", 1.2, "Arena Road", "secondary"], ["C", "I", 1.2, "Tech Park Road", "secondary"], ["I", "O", 1, "City Hall Road", "secondary"], ["O", "U", 1.8, "Factory Road", "primary"], ["D", "J", 1.3, "Old Town Road", "secondary"],
+  ["J", "P", 1.1, "Business Link", "secondary"], ["P", "V", 1.4, "Railway Road", "primary"], ["E", "K", 1.2, "Harbor Link", "secondary"], ["K", "Q", 1.6, "Port Road", "primary"], ["Q", "W", 1, "Logistics Road", "primary"],
+  ["F", "L", 1.1, "Airport Link", "highway"], ["L", "R", 1.7, "East Market Road", "primary"], ["R", "X", 1.2, "Expo Terminal", "highway"], ["B", "G", 1.5, "Lake Front", "local"], ["C", "H", 1.2, "Tech Lane", "local"],
+  ["D", "I", 1.6, "Civic Street", "local"], ["E", "J", 1.3, "Commerce Street", "local"], ["H", "M", 1.8, "College Lane", "local"], ["I", "N", 1.3, "Green Street", "local"], ["J", "O", 1.7, "Clinic Street", "local"],
+  ["K", "P", 1.2, "Harbor Cut", "local"], ["L", "Q", 1.8, "Market Cut", "local"], ["N", "S", 1.1, "Park Road", "local"], ["O", "T", 1.6, "West Medical", "local"], ["P", "U", 1.2, "Railway Cut", "local"],
+  ["Q", "V", 1.5, "Garden Cut", "local"], ["R", "W", 1.1, "Expo Service", "local"], ["C", "G", 2.1, "Ring Road", "highway"], ["F", "K", 1.6, "Airport Spur", "highway"], ["S", "U", 2.4, "Southern Ring", "highway"],
+  ["T", "V", 2, "South Connector", "highway"], ["U", "W", 1.7, "Cargo Road", "highway"], ["V", "X", 1.9, "Terminal Express", "highway"]
+];
+
+export const rawRoundabouts = [
+  { x: 650, y: 325, r: 42, label: "Civic Roundabout" },
+  { x: 840, y: 520, r: 38, label: "Railway Circle" },
+  { x: 1105, y: 565, r: 36, label: "Garden Circle" }
+];
+
+export const rawUTurns = [
+  { x: 565, y: 210, r: 30, start: -0.45, end: Math.PI + 0.45, label: "U-turn" },
+  { x: 1260, y: 420, r: 34, start: Math.PI * 0.55, end: Math.PI * 1.78, label: "U-turn" },
+  { x: 460, y: 710, r: 32, start: -Math.PI * 0.78, end: Math.PI * 0.52, label: "U-turn" }
+];

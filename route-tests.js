@@ -1,61 +1,26 @@
 const assert = require("assert");
-const fs = require("fs");
-const vm = require("vm");
 
-const listeners = {};
-const context = {
-  console,
-  performance,
-  requestAnimationFrame: () => 1,
-  cancelAnimationFrame: () => {},
-  setTimeout,
-  document: {
-    getElementById(id) {
-      if (id === "mapCanvas") {
-        return {
-          width: 1800,
-          height: 1100,
-          getContext: () => new Proxy({}, { get: () => () => {} }),
-          getBoundingClientRect: () => ({ left: 0, top: 0, width: 1800, height: 1100 }),
-          addEventListener: (event, handler) => {
-            listeners[event] = handler;
-          }
-        };
-      }
+(async () => {
+  const { createRouteEngine } = await import("./src/route-engine.mjs");
+  const engine = createRouteEngine();
 
-      if (id === "trafficSelect") {
-        return {
-          value: "normal",
-          selectedIndex: 0,
-          options: [{ text: "Normal" }],
-          addEventListener: () => {}
-        };
-      }
+  const best = engine.aStar("A", "X");
+  assert.strictEqual(best[0], "A");
+  assert.strictEqual(best.at(-1), "X");
 
-      return {
-        textContent: "",
-        disabled: false,
-        classList: { add: () => {}, remove: () => {}, toggle: () => {} },
-        addEventListener: () => {}
-      };
-    }
-  }
-};
+  const roadPick = engine.nearestRoadPoint({ x: 170, y: 165 });
+  assert.ok(roadPick.distance < 40, "road pick should snap to a nearby lane");
+  assert.notStrictEqual(roadPick.laneStartNode, roadPick.laneEndNode, "lane should have direction");
 
-vm.createContext(context);
-vm.runInContext(fs.readFileSync("app.js", "utf8"), context);
+  const possible = engine.findAllPaths("A", "X");
+  assert.ok(possible.length > 0, "possible routes should be found");
+  assert.ok(engine.pathCost(best) > 0, "best path should have a positive cost");
 
-assert.deepStrictEqual(context.aStar("A", "X").at(0), "A");
-assert.deepStrictEqual(context.aStar("A", "X").at(-1), "X");
+  const points = engine.pathToPoints(best, roadPick, roadPick, roadPick.point, roadPick.point);
+  assert.ok(points.length > best.length, "lane geometry should be sampled into multiple points");
 
-const roadPick = context.nearestRoadPoint({ x: 170, y: 165 });
-assert.ok(roadPick.distance < 40, "road pick should snap to a nearby lane");
-assert.notStrictEqual(roadPick.laneStartNode, roadPick.laneEndNode, "lane should have direction");
+  engine.applyTrafficMode("heavy");
+  assert.ok(engine.aStar("A", "X").length > 1, "A* should still work after traffic changes");
 
-listeners.click({ clientX: 170, clientY: 165 });
-listeners.click({ clientX: 1050, clientY: 410 });
-
-const best = context.aStar("A", "X");
-assert.ok(best.length > 1, "A* should return a multi-node route");
-
-console.log("route-tests passed");
+  console.log("route-tests passed");
+})();

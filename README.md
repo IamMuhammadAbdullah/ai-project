@@ -20,7 +20,7 @@ This project implements the route-planning requirements from `AI_ProjectProposal
 
 ## Run
 
-Open `index.html` in a browser. No installation is required.
+Run `node server.mjs`, then open `http://localhost:5173`.
 
 ## Test
 
