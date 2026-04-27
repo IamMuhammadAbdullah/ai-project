@@ -64,7 +64,9 @@ function updateStats() {
     routeSummary.textContent = "Choose two different areas on the map.";
     return;
   }
-  routeSummary.textContent = `${state.possiblePaths.length} routes ready | ${trafficSelect.options[trafficSelect.selectedIndex].text} traffic | A* cost ${engine.pathCost(state.bestPath).toFixed(1)} | ${engine.pathDistance(state.bestPath).toFixed(1)} km`;
+  const cost = state.routeCost ?? engine.pathCost(state.bestPath);
+  const distance = state.routeDistance ?? engine.pathDistance(state.bestPath);
+  routeSummary.textContent = `${state.possiblePaths.length} routes | ${trafficSelect.options[trafficSelect.selectedIndex].text} traffic | Cost ${cost.toFixed(1)} | ${distance.toFixed(1)} km`;
 }
 
 function updateClickHint() {
@@ -77,16 +79,29 @@ function updateClickHint() {
   state.pinError = "";
   mapHint.classList.remove("error");
   mapHint.textContent = !state.startPoint
-    ? "Click a road to place the start pin."
+    ? "Hover over a lane, then click to place the start pin."
     : state.nextClickTarget === "start"
-      ? "Click a road to set a new start pin."
-      : "Click a road to place the destination pin.";
+      ? "Hover over a lane, then click to set a new start pin."
+      : "Hover over a lane, then click to place the destination pin.";
 }
 
-function calculateRoutes(shouldAnimate = true) {
+async function getPythonRoutes() {
+  const params = new URLSearchParams({
+    start: state.startId,
+    end: state.endId,
+    traffic: trafficSelect.value
+  });
+  const response = await fetch(`/api/routes?${params.toString()}`);
+  if (!response.ok) throw new Error("Python route API unavailable");
+  return response.json();
+}
+
+async function calculateRoutes(shouldAnimate = true) {
   if (!state.startPoint || !state.endPoint || !state.startId || !state.endId) {
     state.possiblePaths = [];
     state.bestPath = [];
+    state.routeCost = 0;
+    state.routeDistance = 0;
     state.pathPointCache = new Map();
     state.allRouteProgress = 0;
     state.bestRouteProgress = 0;
@@ -96,8 +111,18 @@ function calculateRoutes(shouldAnimate = true) {
     return;
   }
 
-  state.possiblePaths = engine.findAllPaths(state.startId, state.endId);
-  state.bestPath = engine.aStar(state.startId, state.endId);
+  try {
+    const result = await getPythonRoutes();
+    state.possiblePaths = result.possiblePaths;
+    state.bestPath = result.bestPath;
+    state.routeCost = result.cost;
+    state.routeDistance = result.distance;
+  } catch {
+    state.possiblePaths = engine.findAllPaths(state.startId, state.endId);
+    state.bestPath = engine.aStar(state.startId, state.endId);
+    state.routeCost = engine.pathCost(state.bestPath);
+    state.routeDistance = engine.pathDistance(state.bestPath);
+  }
   state.pathPointCache = new Map();
   state.allRouteProgress = shouldAnimate ? 0 : 1;
   state.bestRouteProgress = shouldAnimate ? 0 : 1;
@@ -129,13 +154,13 @@ function animateRoute() {
 }
 
 function maxRoadDistance(picked) {
-  return picked.edge ? roadWidth(picked.edge.type) * 0.72 : 36;
+  return picked.edge ? Math.max(14, roadWidth(picked.edge.type) * 0.34) : 18;
 }
 
 canvas.addEventListener("click", (event) => {
   const picked = engine.nearestRoadPoint(canvasPoint(event.clientX, event.clientY), state.nextClickTarget === "end" ? state.startId : null);
   if (picked.distance > maxRoadDistance(picked)) {
-    state.pinError = "Pin must be placed on a road. Click closer to a lane.";
+    state.pinError = "Move over a lane until the preview pin appears, then click.";
     state.pinErrorUntil = performance.now() + 2200;
     updateClickHint();
     draw();
@@ -174,7 +199,7 @@ canvas.addEventListener("click", (event) => {
     state.nextClickTarget = "start";
     state.routeStarted = false;
     updateClickHint();
-    calculateRoutes(false);
+    void calculateRoutes(false);
   }
 });
 
@@ -219,7 +244,7 @@ trafficSelect.addEventListener("change", () => {
   state.allRouteProgress = 0;
   state.bestRouteProgress = 0;
   state.pathPointCache = new Map();
-  if (state.startPoint && state.endPoint) calculateRoutes(false);
+  if (state.startPoint && state.endPoint) void calculateRoutes(false);
   else {
     updateStats();
     draw();

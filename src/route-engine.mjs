@@ -196,19 +196,18 @@ export function createRouteEngine() {
       const dx = to.x - from.x;
       const dy = to.y - from.y;
       const lengthSquared = dx * dx + dy * dy || 1;
-      const length = Math.sqrt(lengthSquared);
-      const nx = -dy / length;
-      const ny = dx / length;
       const t = Math.max(0, Math.min(1, ((point.x - from.x) * dx + (point.y - from.y) * dy) / lengthSquared));
-      const center = { x: from.x + dx * t, y: from.y + dy * t };
-      const signedDistance = (point.x - center.x) * nx + (point.y - center.y) * ny;
-      const laneSide = signedDistance < 0 ? -1 : 1;
+      const candidates = [-1, 1].map((laneSide) => {
+        const lanePoint = lanePointOnEdge(edge, t, laneSide);
+        return { laneSide, lanePoint, distance: Math.hypot(point.x - lanePoint.x, point.y - lanePoint.y) };
+      });
+      const closest = candidates[0].distance <= candidates[1].distance ? candidates[0] : candidates[1];
+      const laneSide = closest.laneSide;
       const laneStartNode = laneSide === -1 ? edge.from : edge.to;
       const laneEndNode = laneSide === -1 ? edge.to : edge.from;
       const graphNode = laneStartNode === excludedId ? laneEndNode : laneStartNode;
-      const distanceToRoad = Math.abs(signedDistance);
-      return distanceToRoad < nearest.distance
-        ? { point: lanePointOnEdge(edge, t, laneSide), graphNode, laneStartNode, laneEndNode, laneT: t, distance: distanceToRoad, edge, laneSide }
+      return closest.distance < nearest.distance
+        ? { point: closest.lanePoint, graphNode, laneStartNode, laneEndNode, laneT: t, distance: closest.distance, edge, laneSide }
         : nearest;
     }, { point, graphNode: nearestNode(point, excludedId).id, laneStartNode: null, laneEndNode: null, laneT: 0, distance: Infinity, edge: null, laneSide: 1 });
   }

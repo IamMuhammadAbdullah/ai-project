@@ -1,7 +1,7 @@
 const assert = require("assert");
 
 (async () => {
-  const { createRouteEngine } = await import("./src/route-engine.mjs");
+  const { createRouteEngine } = await import("../src/route-engine.mjs");
   const engine = createRouteEngine();
 
   const best = engine.aStar("A", "X");

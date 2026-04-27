@@ -20,8 +20,19 @@ This project implements the route-planning requirements from `AI_ProjectProposal
 
 ## Run
 
-Run `node server.mjs`, then open `http://localhost:5173`.
+Run `python python_server.py`, then open `http://localhost:5173`.
+
+The browser uses Python for A*, possible route search, route cost, and traffic-weighted calculations. JavaScript still handles map rendering, pin interaction, lane geometry, and animation. If the Python API is unavailable, the browser keeps a JavaScript fallback so the UI does not break.
+
+## Structure
+
+- `python/` contains the Python route engine and map data used by the API.
+- `src/` contains browser-side map data, lane geometry, and canvas rendering helpers.
+- `app.js` contains UI state, event handling, and animation orchestration.
+- `python_server.py` serves the app and exposes `/api/routes`.
+- `tests/` contains Python and JavaScript route checks.
 
 ## Test
 
-Run `node route-tests.js` to check A* routing and lane snapping logic.
+Run `python tests/python_route_tests.py` to check the Python route engine.
+Run `node tests/route-tests.js` to check the JavaScript lane snapping and route geometry fallback.

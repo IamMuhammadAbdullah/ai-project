@@ -8,8 +8,7 @@
 </head>
 <body>
   <main class="app-shell">
-    <section class="map-panel" aria-label="Interactive city map">
-      <canvas id="mapCanvas" width="1800" height="1100"></canvas>
+    <aside class="control-panel" aria-label="Route controls">
       <div class="topbar">
         <div>
           <h1>A* Traffic Route Planner</h1>
@@ -30,13 +29,17 @@
         </div>
       </div>
       <div class="legend" aria-label="Map legend">
+        <strong>Legend</strong>
         <p><i class="line possible"></i>Possible routes</p>
         <p><i class="line best"></i>A* efficient route</p>
-        <p><i class="line low"></i>Low</p>
-        <p><i class="line medium"></i>Medium</p>
+        <p><i class="line low"></i>Low traffic</p>
+        <p><i class="line medium"></i>Medium traffic</p>
         <p><i class="line high"></i>Heavy traffic</p>
       </div>
-      <div class="map-hint" id="mapHint">Click anywhere to set the start point.</div>
+      <div class="map-hint" id="mapHint">Click a road to set the start point.</div>
+    </aside>
+    <section class="map-panel" aria-label="Interactive city map">
+      <canvas id="mapCanvas" width="1800" height="1100"></canvas>
     </section>
   </main>
 
