@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>A* Traffic Route Planner</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main class="app-shell">
+    <section class="map-panel" aria-label="Interactive city map">
+      <canvas id="mapCanvas" width="1800" height="1100"></canvas>
+      <div class="topbar">
+        <div>
+          <h1>A* Traffic Route Planner</h1>
+          <p id="routeSummary">Click once for start, then click again for destination.</p>
+        </div>
+        <div class="toolbar" aria-label="Map actions">
+          <button id="pinModeBtn" type="button">Select Pin</button>
+          <button id="clearPinsBtn" type="button" class="secondary">Remove Pins</button>
+          <button id="startRouteBtn" type="button" disabled>Start</button>
+        </div>
+      </div>
+      <div class="legend" aria-label="Map legend">
+        <p><i class="line possible"></i>Possible routes</p>
+        <p><i class="line best"></i>A* efficient route</p>
+        <p><i class="line low"></i>Low</p>
+        <p><i class="line medium"></i>Medium</p>
+        <p><i class="line high"></i>Heavy traffic</p>
+      </div>
+      <div class="map-hint" id="mapHint">Click anywhere to set the start point.</div>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
